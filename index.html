@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <title>ESP8266 Control</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #296455;
+            color: #ecf0f1;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 50px auto;
+            padding: 25px;
+            background-color: #34495e;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        h1, h2 {
+            margin-bottom: 16px;
+            font-size: 28px;
+            color: #f0af36;
+        }
+
+        h3 {
+            margin-bottom: 10px;
+            font-size: 20px;
+            margin-top: 5px;
+            color: #9b59b6;
+        }
+
+        h4 {
+            font-size: 18px;
+            margin: 10px 0;
+            color: #2980b9;
+        }
+
+        .switch, .switch1 {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input, .switch1 input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #13c3cf;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider1{
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #10f871;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before, .slider1:before {
+            position: absolute;
+            content: '';
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider  {
+            background-color: #e6d11a;
+        }
+        input:checked + .slider1 {
+            background-color: #ae2727;
+        }
+        input:checked + .slider:before, input:checked + .slider1:before {
+            transform: translateX(26px);
+        }
+
+        .slider.round, .slider1.round {
+            border-radius: 34px;
+        }
+
+        .slider.round:before, .slider1.round:before {
+            border-radius: 50%;
+        }
+
+        .sensor-value {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .progress-circle {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: conic-gradient(#27ae60 0%, #e74c3c 50%, #bdc3c7 50%, #bdc3c7 100%);
+            margin: 20px auto;
+        }
+
+        .progress-circle .circle-overlay {
+            position: absolute;
+            top: 10%;
+            left: 10%;
+            width: 80%;
+            height: 80%;
+            background-color: #9bda08;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #34495e;
+            font-size: 25px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            top: 10px;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 150px;
+            background-color: rgba(44, 62, 80, 0.95);
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+        }
+
+        .modal-content {
+            background-color: #c0392b;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .close {
+            color: #fff;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover, .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .info {
+            margin-top: 20px;
+        }
+
+        .info a {
+            margin: 0 10px;
+        }
+
+        .info img {
+            height: 40px;
+            width: 40px;
+            transition: transform 0.3s;
+        }
+
+        .info img:hover {
+            transform: scale(1.1);
+        }
+
+        .time {
+            margin-top: 20px;
+        }
+
+        #realTime {
+            font-size: 24px;
+            color: #dac1bf;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>HỆ THỐNG CẢNH BÁO MƯA VÀ TỰ ĐỘNG ĐÓNG CỬA SỔ</h1>
+
+        <div class="chedo">
+            <h3>Chọn Chế Độ </h3>
+            <h4>Auto / Manual</h4>
+            <label class="switch">
+                <input type="checkbox" id="toggleSwitch">
+                <span class="slider round"></span>
+            </label>
+        </div>
+
+        <div class="LedControl">
+            <h3>Open/Close Window</h3>
+            <h4>Open / Close</h4>
+            <label class="switch1">
+                <input type="checkbox" id="toggleSwitch1">
+                <span class="slider1 round"></span>
+            </label>
+        </div>
+
+        <div class="time">
+            <h3>Time Clock</h3>
+            <div id="realTime"></div>
+        </div>
+
+        <div class="sensor-value">
+            <h2>Sensor Value</h2>
+            <div class="progress-circle">
+                <div class="circle-overlay">
+                    <span id="sensorValue">N/A</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="document.getElementById('myModal').style.display='none'">&times;</span>
+                <p>CẢNH BÁO!! Trời có mưa</p>
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>Thông tin liên hệ</h3>
+            <h3>Mạnh Nguyễn</h3>
+            <h4>SĐT / ZALO: 0398741763</h4>
+            <a href="https://www.facebook.com/manhnguyen.0410/" target="_blank" title="click để đến facebook Nguyễn Mạnh">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Facebook_logo_36x36.svg/1200px-Facebook_logo_36x36.svg.png">
+            </a>
+            <a href="https://www.instagram.com/mah_nguyeg/" target="_blank" title="click để đến instagram Nguyễn Mạnh">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Instagram_logo_2016.svg/1200px-Instagram_logo_2016.svg.png">
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Thiết lập thông tin kết nối MQTT
+        var broker = "test.mosquitto.org";
+        var port = 8081;
+        var clientID = "web_" + parseInt(Math.random() * 100, 10);
+        var topic = "device/servo";
+        var isLightOn = false;
+        var timeoutId = null;
+        var isAuto = false;
+
+        // Tạo kết nối MQTT
+        var mqttClient = new Paho.MQTT.Client(broker, port, clientID);
+
+        // Kết nối đến broker MQTT
+        mqttClient.connect({
+            onSuccess: function () {
+                console.log("Connected to MQTT broker");
+                // Đăng ký callback để nhận dữ liệu cảm biến từ ESP8266
+                mqttClient.subscribe("sensor1");
+            },
+            onFailure: function (errorMessage) {
+                console.log("Failed to connect: " + errorMessage.errorMessage);
+            }
+        });
+
+        // Bắt sự kiện khi nhấn nút switch
+        document.getElementById("toggleSwitch1").addEventListener("change", function () {
+            var state = this.checked ? "1" : "0"; // 1 là bật, 0 là tắt
+            if (state == "1") {
+                isLightOn = true;
+            } else {
+                isLightOn = false;
+            }
+            // Gửi tin nhắn điều khiển tới broker MQTT
+            var message = new Paho.MQTT.Message(state);
+            message.destinationName = topic;
+            mqttClient.send(message);
+        });
+
+        document.getElementById("toggleSwitch").addEventListener("change", function () {
+            var state1 = this.checked ? "auto" : "manu";
+            if (state1 == "auto") {
+                isAuto = true;
+            } else {
+                isAuto = false;
+            }
+            // Gửi tin nhắn điều khiển tới broker MQTT
+            var message1 = new Paho.MQTT.Message(state1);
+            message1.destinationName = topic;
+            mqttClient.send(message1);
+        });
+
+        // Đăng ký callback để nhận dữ liệu cảm biến từ ESP8266
+        mqttClient.onMessageArrived = function (message) {
+            // Hiển thị giá trị cảm biến nhận được
+            console.log("Received message:", message.payloadString);
+            var sensorValue = parseInt(message.payloadString);
+            updateProgressCircle(sensorValue);
+            updateSensorValue(sensorValue);
+            if (!isAuto) {
+                if (sensorValue < 1000 && !isLightOn) {
+                    // Chuyển trạng thái nút switch sang ON
+                    isLightOn = true;
+                    document.getElementById("toggleSwitch1").checked = true;
+                    var state = "1"; // Bật đèn
+                    var message = new Paho.MQTT.Message(state);
+                    message.destinationName = topic;
+                    mqttClient.send(message);
+                }
+
+                if (sensorValue > 1000 && isLightOn) {
+                    // Đặt hành động trì hoãn 10 giây trước khi tắt đèn
+                    timeoutId = setTimeout(function () {
+                        // Tắt đèn và cập nhật trạng thái
+                        document.getElementById("toggleSwitch1").checked = false;
+                        isLightOn = false;
+                        var state = "0"; // Tắt đèn
+                        var message = new Paho.MQTT.Message(state);
+                        message.destinationName = topic;
+                        mqttClient.send(message);
+                    }, 5000); // Delay 10 giây (10000 milliseconds)
+                } else if (sensorValue < 1000 && isLightOn && timeoutId !== null) {
+                    // Nếu giá trị cảm biến trở lại dưới 80% trước khi timeout được thực hiện, hủy hành động trì hoãn
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
+            } else {
+                if (sensorValue < 1000 && !isLightOn) {
+                    showAlertModal();
+                }
+            }
+        };
+
+        // Hàm cập nhật thanh tiến trình hình tròn dựa trên giá trị cảm biến
+        function updateProgressCircle(value) {
+            var progressCircle = document.querySelector(".progress-circle");
+            var degree = (value * 360) / 1024;
+            progressCircle.style.background = `conic-gradient(#27ae60 0%, #e74c3c ${degree}deg, #bdc3c7 ${degree}deg, #bdc3c7 360deg)`;
+        }
+
+        // Hàm cập nhật giá trị cảm biến
+        function updateSensorValue(value) {
+            var sensorValueElement = document.getElementById("sensorValue");
+            sensorValueElement.textContent = value;
+        }
+
+        function updateRealTimeClock() {
+            var currentTime = new Date();
+            var hours = currentTime.getHours();
+            var minutes = currentTime.getMinutes();
+            var seconds = currentTime.getSeconds();
+
+            // Định dạng thời gian để hiển thị với dạng HH:MM:SS
+            var formattedTime = hours + ":" + minutes + ":" + seconds;
+
+            // Hiển thị thời gian thực trên trang web
+            document.getElementById('realTime').innerText = formattedTime;
+        }
+
+        // Cập nhật thời gian thực mỗi giây
+        setInterval(updateRealTimeClock, 1000);
+
+        // Function để hiển thị thông báo và kiểm soát thời gian hiển thị
+        function showAlertModal() {
+            document.getElementById('myModal').style.display = 'block';
+            // Đóng cửa sổ modal sau 5 giây
+            setTimeout(function () {
+                document.getElementById('myModal').style.display = 'none';
+            }, 5000); // 5000 milliseconds = 5 giây
+        }
+    </script>
+</body>
+
+</html>
